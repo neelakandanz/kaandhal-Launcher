@@ -8,6 +8,9 @@ import 'package:installed_apps/app_info.dart';
 import 'package:installed_apps/installed_apps.dart';
 import 'package:myapp/app/mvc/controller/date_time/date_time_controller.dart';
 
+import '../../../global/routes/swipeable_page_routes.dart';
+import '../setting/setting_screen.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -95,6 +98,14 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => navigateWithSwipe(context, const SettingsScreen()),
+
+        //Get.to(() => const SettingsScreen()),
+        backgroundColor: const Color.fromARGB(255, 242, 246, 252),
+        elevation: 6.0, // Navigate to the settings screen
+        child: const Icon(Icons.settings),
       ),
     );
   }
