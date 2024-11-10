@@ -4,9 +4,15 @@ import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 
 import '../../controller/background_image/background_image_controller.dart';
+import '../../controller/call_button_controller/call_button_controller.dart';
+import '../../controller/font_color_controller/font_color_controller.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  SettingsScreen({super.key});
+  final FontColorController fontColorController =
+      Get.put(FontColorController());
+          final CallButtonController callButtonController = Get.put(CallButtonController());
+
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +30,27 @@ class SettingsScreen extends StatelessWidget {
             title: const Text('Set Background Theme'),
             onTap: () => showThemeSelectionDialog(context),
           ),
+          Obx(() => ListTile(
+                leading: const Icon(Icons.color_lens),
+                title: const Text('Change Font Color'),
+                trailing: Switch(
+                  value: fontColorController.isWhite.value,
+                  onChanged: (value) {
+                    fontColorController.toggleFontColor();
+                  },
+                ),
+              )
+              ),
+                        Obx(() => ListTile(
+                leading: const Icon(Icons.call),
+                title: const Text('Enable Call Option'),
+                trailing: Switch(
+                  value: callButtonController.isCallButtonEnabled.value,
+                  onChanged: (value) {
+                    callButtonController.toggleCallButton();
+                  },
+                ),
+              )),
         ],
       ),
     );
@@ -32,7 +59,8 @@ class SettingsScreen extends StatelessWidget {
   void _openSystemSettings() async {
     const platform = MethodChannel('com.example.myapp/openApp');
     try {
-      await platform.invokeMethod('openApp', {'packageName': 'com.android.settings'});
+      await platform
+          .invokeMethod('openApp', {'packageName': 'com.android.settings'});
       log('Opened system settings');
     } on PlatformException catch (e) {
       log('Error opening system settings: ${e.message}');
@@ -46,7 +74,8 @@ class SettingsScreen extends StatelessWidget {
         return Dialog(
           child: ThemeSelectionCarousel(
             onThemeSelected: (selectedImagePath) {
-              Get.find<BackgroundImageController>().setBackgroundImage(selectedImagePath);
+              Get.find<BackgroundImageController>()
+                  .setBackgroundImage(selectedImagePath);
               Navigator.pop(context); // Close the dialog
             },
           ),
@@ -59,7 +88,7 @@ class SettingsScreen extends StatelessWidget {
 class ThemeSelectionCarousel extends StatefulWidget {
   final ValueChanged<String> onThemeSelected;
 
-  const ThemeSelectionCarousel({required this.onThemeSelected});
+  const ThemeSelectionCarousel({super.key, required this.onThemeSelected});
 
   @override
   ThemeSelectionCarouselState createState() => ThemeSelectionCarouselState();

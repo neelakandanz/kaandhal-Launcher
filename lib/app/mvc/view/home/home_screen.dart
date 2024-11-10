@@ -7,8 +7,10 @@ import 'package:installed_apps/installed_apps.dart';
 
 import '../../../global/routes/swipeable_page_routes.dart';
 import '../../../utils/custom_widgets/custom_text_widget.dart';
+import '../../controller/call_button_controller/call_button_controller.dart';
 import '../../controller/date_time/date_time_controller.dart';
 import '../../controller/background_image/background_image_controller.dart';
+import '../../controller/font_color_controller/font_color_controller.dart';
 import '../setting/setting_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -22,9 +24,12 @@ class HomeScreenState extends State<HomeScreen> {
   List<AppInfo>? apps;
   static const platform = MethodChannel('com.example.myapp/openApp');
   final DateTimeController dateTimeController = Get.put(DateTimeController());
+  final CallButtonController callButtonController = Get.find();
+
   final BackgroundImageController backgroundImageController =
       Get.put(BackgroundImageController());
-
+  final FontColorController fontColorController =
+      Get.put(FontColorController());
   @override
   void initState() {
     super.initState();
@@ -46,6 +51,17 @@ class HomeScreenState extends State<HomeScreen> {
       log(result ? 'App opened successfully.' : 'Failed to open app.');
     } on PlatformException catch (e) {
       log('Error: ${e.message}');
+    }
+  }
+
+  void _openCallApp() async {
+    const platform = MethodChannel('com.example.myapp/openApp');
+    try {
+      await platform.invokeMethod(
+          'openApp', {'packageName': 'com.google.android.dialer'});
+      log('Opened Google Dialer app');
+    } on PlatformException catch (e) {
+      log('Error opening Google Dialer app: ${e.message}');
     }
   }
 
@@ -72,12 +88,14 @@ class HomeScreenState extends State<HomeScreen> {
                   Obx(
                     () => TextTimeWidget(
                       text: dateTimeController.currentTime.value,
+                      color: fontColorController.fontColor,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Obx(
                     () => TextTimeWidget(
                       text: dateTimeController.currentDate.value,
+                      color: fontColorController.fontColor,
                       fontSize: 24.0,
                     ),
                   ),
@@ -94,7 +112,13 @@ class HomeScreenState extends State<HomeScreen> {
                             leading: apps![index].icon != null
                                 ? Image.memory(apps![index].icon!)
                                 : null,
-                            title: Text(apps![index].name),
+                            title: TextTimeWidget(
+                              text: (apps![index].name),
+                              color: fontColorController.fontColor,
+                              fontSize: 20.0,
+                              fontWeight: FontWeight.normal,
+
+                            ),
                             onTap: () => _openApp(apps![index].packageName),
                           );
                         },
@@ -104,11 +128,33 @@ class HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => navigateWithSwipe(context, const SettingsScreen()),
-        backgroundColor: const Color.fromARGB(255, 242, 246, 252),
-        elevation: 6.0,
-        child: const Icon(Icons.settings),
+      floatingActionButton: Stack(
+        children: [
+          // Settings Floating Action Button
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () => navigateWithSwipe(context, SettingsScreen()),
+              backgroundColor: Colors.white,
+              elevation: 6.0,
+              child: const Icon(Icons.settings),
+            ),
+          ),
+          // Call Floating Action Button (conditionally visible)
+          Obx(() => callButtonController.isCallButtonEnabled.value
+              ? Positioned(
+                  bottom: 16,
+                  right: 80, // Adjust positioning to avoid overlap
+                  child: FloatingActionButton(
+                    onPressed: _openCallApp,
+                    backgroundColor: Colors.white,
+                    elevation: 6.0,
+                    child: const Icon(Icons.call),
+                  ),
+                )
+              : Container()),
+        ],
       ),
     );
   }
