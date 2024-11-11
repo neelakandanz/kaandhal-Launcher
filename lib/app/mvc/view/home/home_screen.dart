@@ -2,9 +2,7 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:installed_apps/app_info.dart';
-import 'package:installed_apps/installed_apps.dart';
-
+import 'package:myapp/app/mvc/view/all_apps/all_apps.dart';
 import '../../../global/routes/swipeable_page_routes.dart';
 import '../../../utils/custom_widgets/custom_text_widget.dart';
 import '../../controller/call_button_controller/call_button_controller.dart';
@@ -12,6 +10,7 @@ import '../../controller/date_time/date_time_controller.dart';
 import '../../controller/background_image/background_image_controller.dart';
 import '../../controller/font_color_controller/font_color_controller.dart';
 import '../setting/setting_screen.dart';
+import 'dart:ui'; // Required for BackdropFilter
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class HomeScreenState extends State<HomeScreen> {
-  List<AppInfo>? apps;
   static const platform = MethodChannel('com.example.myapp/openApp');
   final DateTimeController dateTimeController = Get.put(DateTimeController());
   final CallButtonController callButtonController = Get.find();
@@ -30,32 +28,14 @@ class HomeScreenState extends State<HomeScreen> {
       Get.put(BackgroundImageController());
   final FontColorController fontColorController =
       Get.put(FontColorController());
+
   @override
   void initState() {
     super.initState();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
-    _fetchInstalledApps();
-  }
-
-  void _fetchInstalledApps() async {
-    List<AppInfo> appList = await InstalledApps.getInstalledApps(true, true);
-    setState(() {
-      apps = appList;
-    });
-  }
-
-  Future<void> _openApp(String packageName) async {
-    try {
-      final bool result =
-          await platform.invokeMethod('openApp', {'packageName': packageName});
-      log(result ? 'App opened successfully.' : 'Failed to open app.');
-    } on PlatformException catch (e) {
-      log('Error: ${e.message}');
-    }
   }
 
   void _openCallApp() async {
-    const platform = MethodChannel('com.example.myapp/openApp');
     try {
       await platform.invokeMethod(
           'openApp', {'packageName': 'com.google.android.dialer'});
@@ -68,93 +48,115 @@ class HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Obx(
-        () => Container(
-          decoration: backgroundImageController.backgroundImagePath.isNotEmpty
-              ? BoxDecoration(
-                  image: DecorationImage(
-                    image: AssetImage(
-                        backgroundImageController.backgroundImagePath.value),
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : null,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.center,
+      body: GestureDetector(
+        onHorizontalDragStart: (details) {
+          navigateWithSwipe(context, const AllApps());
+        },
+        child: Obx(
+          () => Stack(
             children: [
-              Column(
-                children: [
-                  Obx(
-                    () => TextTimeWidget(
-                      text: dateTimeController.currentTime.value,
-                      color: fontColorController.fontColor,
+              // Background
+             Container(
+            decoration: backgroundImageController.backgroundImagePath.isNotEmpty
+                ? BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage(
+                          backgroundImageController.backgroundImagePath.value),
+                      fit: BoxFit.cover,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Obx(
-                    () => TextTimeWidget(
-                      text: dateTimeController.currentDate.value,
-                      color: fontColorController.fontColor,
-                      fontSize: 24.0,
-                    ),
-                  ),
-                ],
+                  )
+                : null,
+                  // gradient: backgroundImageController
+                  //         .backgroundImagePath.isEmpty
+                  //     ? const LinearGradient(
+                  //         colors: [Colors.blueAccent, Colors.deepPurpleAccent],
+                  //         begin: Alignment.topCenter,
+                  //         end: Alignment.bottomCenter,
+                  //       )
+                   //   : null,
+                
               ),
-              const SizedBox(height: 20),
-              Expanded(
-                child: apps == null
-                    ? const Center(child: CircularProgressIndicator())
-                    : ListView.builder(
-                        itemCount: apps!.length,
-                        itemBuilder: (context, index) {
-                          return ListTile(
-                            leading: apps![index].icon != null
-                                ? Image.memory(apps![index].icon!)
-                                : null,
-                            title: TextTimeWidget(
-                              text: (apps![index].name),
-                              color: fontColorController.fontColor,
-                              fontSize: 20.0,
-                              fontWeight: FontWeight.normal,
-
-                            ),
-                            onTap: () => _openApp(apps![index].packageName),
-                          );
-                        },
+              // Glassmorphism effect
+              // Center(
+              //   child: BackdropFilter(
+              //     filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              //     child: Container(
+              //       alignment: Alignment.center,
+              //       color: Colors.black.withOpacity(0.2), // Frosted effect
+              //     ),
+              //   ),
+              // ),
+              // Main Content: Date & Time
+              Positioned(
+                left: 0,
+                right: 0,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(height: 10,),
+                    // Date at the top
+                    Obx(
+                      () => TextTimeWidget(
+                        text: dateTimeController.currentDate.value,
+                        color: fontColorController.fontColor,
+                        fontSize: 24.0,
                       ),
+                    ),
+                    // Time at the bottom center
+                    Obx(
+                      () => TextTimeWidget(
+                        text: dateTimeController.currentTime.value,
+                        color: fontColorController.fontColor,
+                        fontSize: 48.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Rounded icons at the bottom
+              Positioned(
+                bottom: 40,
+                left: 40,
+                child: _buildGlassIcon(
+                  icon: Icons.call,
+                  onTap: _openCallApp,
+                ),
+              ),
+              Positioned(
+                bottom: 40,
+                right: 40,
+                child: _buildGlassIcon(
+                  icon: Icons.settings,
+                  onTap: () => navigateWithSwipe(context, SettingsScreen()),
+                ),
               ),
             ],
           ),
         ),
       ),
-      floatingActionButton: Stack(
-        children: [
-          // Settings Floating Action Button
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              onPressed: () => navigateWithSwipe(context, SettingsScreen()),
-              backgroundColor: Colors.white,
-              elevation: 6.0,
-              child: const Icon(Icons.settings),
+    );
+  }
+
+  // Glass-like button builder for icons
+  Widget _buildGlassIcon(
+      {required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(30.0),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.all(12.0),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
+            child: Icon(icon, color: Colors.white, size: 30),
           ),
-          // Call Floating Action Button (conditionally visible)
-          Obx(() => callButtonController.isCallButtonEnabled.value
-              ? Positioned(
-                  bottom: 16,
-                  right: 80, // Adjust positioning to avoid overlap
-                  child: FloatingActionButton(
-                    onPressed: _openCallApp,
-                    backgroundColor: Colors.white,
-                    elevation: 6.0,
-                    child: const Icon(Icons.call),
-                  ),
-                )
-              : Container()),
-        ],
+        ),
       ),
     );
   }
